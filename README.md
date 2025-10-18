@@ -25,37 +25,6 @@ asset handling.
 
 ---
 
-## TODO
-
-Implement **frame decompression** support from `lz4frame.h`, as many third-party
-LZ4 libraries use framed streams for cross-platform compatibility.
-
-Frame decompression requires additional logic - specifically, polling or
-checking when a `ByteArray` is ready to be processed.
-
-Planned API additions:
-
-```as3
-// Check if the frame data in src is ready to decompress
-function frameIsReady(frameHandlePtr:uint, src:ByteArray):int
-// Returns:
-//   >0  -> number of bytes to be consumed before ready
-//   <0  -> invalid data
-//   0   -> not ready yet
-
-// Get frame length (if available)
-function frameLength(frameHandlePtr:uint, src:ByteArray):int
-
-// Decompress a complete frame into dest
-function decompressFrame(frameHandlePtr:uint, src:ByteArray, dest:ByteArray):int
-// Ensures src.position matches frameLength when done
-
-// Compress a frame from src into dest
-function compressFrame(frameHandlePtr:uint, src:ByteArray, dest:ByteArray):int
-```
-
----
-
 ## Example
 
 ```as3
@@ -87,7 +56,39 @@ Output files are placed in `/bin`.
 
 ---
 
+## TODO
+
+Implement **frame decompression** support from `lz4frame.h`, as many third-party
+LZ4 libraries use framed streams for cross-platform compatibility.
+
+Frame decompression requires additional logic - specifically, polling or
+checking when a `ByteArray` is ready to be processed.
+
+Planned API additions:
+
+```as3
+// Check if the frame data in src is ready to decompress
+function frameIsReady(frameHandlePtr:uint, src:ByteArray):int
+// Returns:
+//   >0  -> number of bytes to be consumed before ready
+//   <0  -> invalid data
+//   0   -> not ready yet
+
+// Get frame length (if available)
+function frameLength(frameHandlePtr:uint, src:ByteArray):int
+
+// Decompress a complete frame into dest
+function decompressFrame(frameHandlePtr:uint, src:ByteArray, dest:ByteArray):int
+// Ensures src.position matches frameLength when done
+
+// Compress a frame from src into dest
+function compressFrame(frameHandlePtr:uint, src:ByteArray, dest:ByteArray):int
+```
+
+---
+
 ## License
 
 This project integrates the official [LZ4](https://github.com/lz4/lz4) and
 [XXHASH](https://github.com/Cyan4973/xxHash) libary which are BSD-licensed.
+
