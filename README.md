@@ -19,7 +19,8 @@ asset handling.
 ## Features
 
 - ✅ Block-level compression and decompression
-- ✅ Stream compression support
+- ✅ Stream compression and decompression support
+- ✅ Frame compression support
 - ✅ Integration with `ByteArray` for seamless AS3 use
 - ✅ Built from native LZ4 sources (`lib/`)
 
@@ -93,5 +94,6 @@ function compressFrame(frameHandlePtr:uint, src:ByteArray, dest:ByteArray):int
 
 This project integrates the official [LZ4](https://github.com/lz4/lz4) and
 [XXHASH](https://github.com/Cyan4973/xxHash) libary which are BSD-licensed.
+
 
 
