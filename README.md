@@ -29,19 +29,45 @@ asset handling.
 ## Example
 
 ```as3
-var input:ByteArray = new ByteArray();
-input.writeUTFBytes("hello world! hello world! hello world!");
-input.position = 0;
+package
+{
+    import flash.display.Sprite;
+    import flash.utils.ByteArray;
+    import com.lz4.*;
 
-var compressed:ByteArray = new ByteArray();
-var decompressed:ByteArray = new ByteArray();
+    public class Main extends Sprite
+    {
+        public function Main()
+        {
+            testLibBlockOps();
+        }
 
-var compressedSize:int = com.lz4.compress(input, compressed, 5);
-var decompressedSize:int = com.lz4.decompress(compressed, decompressed, input.length);
+        private function testLibBlockOps():void
+        {
+            function repeatString(str:String, times:int):String
+            {
+                return new Array(times + 1).join(str);
+            }
 
-trace("compressed:", compressedSize, "bytes");
-trace("decompressed:", decompressedSize, "bytes");
-trace("equal:", decompressed.toString() == input.toString());
+            var a:ByteArray = new ByteArray();
+            var b:ByteArray = new ByteArray();
+            var c:ByteArray = new ByteArray();
+
+            var input:String = repeatString("hello world! ", 10000);
+            a.writeUTFBytes(input);
+            a.position = 0;
+
+            // Call native functions from com.lz4 SWC
+            var compressedSize:int = com.lz4.compress(a, b, 5);
+            var decompressedSize:int = com.lz4.decompress(b, c, a.length);
+
+            trace("raw size: " + a.length);
+            trace("compressed size: " + compressedSize);
+            trace("decompressed length: " + decompressedSize);
+            trace("data equals: " + (c.toString() == input));
+        }
+    }
+}
 ```
 
 ---
@@ -94,6 +120,7 @@ function compressFrame(frameHandlePtr:uint, src:ByteArray, dest:ByteArray):int
 
 This project integrates the official [LZ4](https://github.com/lz4/lz4) and
 [XXHASH](https://github.com/Cyan4973/xxHash) libary which are BSD-licensed.
+
 
 
 
