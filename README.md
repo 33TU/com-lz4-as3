@@ -47,6 +47,8 @@ trace("equal:", decompressed.toString() == input.toString());
 
 ## Build
 
+Compiler used: https://github.com/crossbridge-community/crossbridge
+
 ```bat
 build-exe.bat => builds native EXE test
 build-swc.bat => builds SWC (com.lz4)
@@ -91,4 +93,5 @@ function compressFrame(frameHandlePtr:uint, src:ByteArray, dest:ByteArray):int
 
 This project integrates the official [LZ4](https://github.com/lz4/lz4) and
 [XXHASH](https://github.com/Cyan4973/xxHash) libary which are BSD-licensed.
+
 
