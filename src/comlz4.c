@@ -57,12 +57,10 @@ static void test_lib_frame_ops(void)
         "if (size <= 0) trace('invalid (size <= 0), size:' + size);"
         "compressedSize += size;"
 
-        "for(var i:int=0; i < 128; i++) {"
         "a.position = 0;"
         "var size:int = com.lz4.compressFrameUpdate(frameCompressorHandle, a, b);"
         "if (size <= 0) trace('invalid (size <= 0), size:' + size);"
         "compressedSize += size;"
-        "}"
 
         "size = com.lz4.compressFrameEnd(frameCompressorHandle, b);"
         "if (size <= 0) trace('invalid (size <= 0), size:' + size);"

@@ -1,12 +1,14 @@
 @echo off
-REM Build SWC version of LZ4 sample
+REM Build SWC version of LZ4
 
 gcc -emit-swc="com.lz4" ^
     -flto-api=exports.txt ^
     -fllvm-opt-opt=-strip ^
     -disable-telemetry ^
     -O4 ^
+    -DNDEBUG ^
     src\comlz4_block.c ^
+    src\comlz4_buffer.c ^
     src\comlz4_stream.c ^
     src\comlz4_frame.c ^
     src\comlz4.c ^
