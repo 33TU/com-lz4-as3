@@ -1,5 +1,5 @@
-#include "comlz4.h"
 #include <string.h>
+#include "comlz4.h"
 
 typedef struct
 {
@@ -33,9 +33,7 @@ void init_frame_compressor(void)
 
 _err_cleanup:
     if (ctx)
-    {
         free(ctx);
-    }
     AS3_Return(0);
 }
 
@@ -47,6 +45,7 @@ void free_frame_compressor(void)
 
     LZ4F_freeCompressionContext(ctx->cctx);
     free(ctx);
+
     AS3_Return(1);
 
 _err_cleanup:
@@ -55,16 +54,16 @@ _err_cleanup:
 
 void frame_compress_begin(void)
 {
-    char *dest_data = NULL;
-
     CompressionContext *ctx;
     inline_as3("%0 = handlePtr;" : "=r"(ctx));
     NULL_CHECK(ctx);
 
-    dest_data = (char *)malloc(LZ4F_HEADER_SIZE_MAX);
+    char *dest_data = buffer_reserve(LZ4F_HEADER_SIZE_MAX);
     NULL_CHECK(dest_data);
 
-    size_t compressed_size = LZ4F_compressBegin(ctx->cctx, dest_data, LZ4F_HEADER_SIZE_MAX, &ctx->prefs);
+    size_t compressed_size =
+        LZ4F_compressBegin(ctx->cctx, dest_data, LZ4F_HEADER_SIZE_MAX, &ctx->prefs);
+
     if (LZ4F_isError(compressed_size))
     {
         HANDLE_ERROR("compress begin frame failed");
@@ -72,21 +71,15 @@ void frame_compress_begin(void)
 
     inline_as3("CModule.ram.position = %0;" : : "r"(dest_data));
     inline_as3("CModule.ram.readBytes(dest, dest.position, %0);" : : "r"(compressed_size));
-    free(dest_data);
+
     AS3_Return(compressed_size);
 
 _err_cleanup:
-    if (dest_data)
-    {
-        free(dest_data);
-    }
     AS3_Return(0);
 }
 
 void frame_compress_update(void)
 {
-    char *data = NULL;
-
     CompressionContext *ctx;
     inline_as3("%0 = handlePtr;" : "=r"(ctx));
     NULL_CHECK(ctx);
@@ -104,13 +97,18 @@ void frame_compress_update(void)
         HANDLE_ERROR("compress bound check failed");
     }
 
-    data = (char *)malloc(src_len + max_compressed_size);
-    NULL_CHECK(data);
-    char *src_data = data;
-    char *dest_data = data + src_len;
+    char *buf = buffer_reserve(src_len + max_compressed_size);
+    NULL_CHECK(buf);
+
+    char *src_data = buf;
+    char *dest_data = src_data + src_len;
 
     inline_as3("src.readBytes(CModule.ram, %0, %1);" : : "r"(src_data), "r"(src_len));
-    size_t compressed_size = LZ4F_compressUpdate(ctx->cctx, dest_data, max_compressed_size, src_data, src_len, NULL);
+
+    size_t compressed_size =
+        LZ4F_compressUpdate(ctx->cctx, dest_data, max_compressed_size,
+                            src_data, src_len, NULL);
+
     if (LZ4F_isError(compressed_size))
     {
         HANDLE_ERROR("compress update frame failed");
@@ -118,21 +116,15 @@ void frame_compress_update(void)
 
     inline_as3("CModule.ram.position = %0;" : : "r"(dest_data));
     inline_as3("CModule.ram.readBytes(dest, dest.position, %0);" : : "r"(compressed_size));
-    free(data);
+
     AS3_Return(compressed_size);
 
 _err_cleanup:
-    if (data)
-    {
-        free(data);
-    }
     AS3_Return(0);
 }
 
 void frame_compress_end(void)
 {
-    char *dest_data = NULL;
-
     CompressionContext *ctx;
     inline_as3("%0 = handlePtr;" : "=r"(ctx));
     NULL_CHECK(ctx);
@@ -143,10 +135,12 @@ void frame_compress_end(void)
         HANDLE_ERROR("compress bound check failed");
     }
 
-    dest_data = (char *)malloc(max_compressed_size);
+    char *dest_data = buffer_reserve(max_compressed_size);
     NULL_CHECK(dest_data);
 
-    size_t compressed_size = LZ4F_compressEnd(ctx->cctx, dest_data, max_compressed_size, NULL);
+    size_t compressed_size =
+        LZ4F_compressEnd(ctx->cctx, dest_data, max_compressed_size, NULL);
+
     if (LZ4F_isError(compressed_size))
     {
         HANDLE_ERROR("compress end frame failed");
@@ -154,14 +148,9 @@ void frame_compress_end(void)
 
     inline_as3("CModule.ram.position = %0;" : : "r"(dest_data));
     inline_as3("CModule.ram.readBytes(dest, dest.position, %0);" : : "r"(compressed_size));
-    free(dest_data);
 
     AS3_Return(compressed_size);
 
 _err_cleanup:
-    if (dest_data)
-    {
-        free(dest_data);
-    }
     AS3_Return(0);
 }
