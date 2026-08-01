@@ -16,7 +16,6 @@ ratio. See [Benchmark](#benchmark) for the measurements and where each one wins.
 - Frame content checksums, verified automatically on decode
 - Direct `ByteArray` input and output
 - Reusable scratch buffers to reduce native allocations
-- Strict, Flash-compatible AS3 output without ABC 47 `float` support
 - Vendored LZ4 and xxHash sources under `native/vendor/`
 
 ## Public API
