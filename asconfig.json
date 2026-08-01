@@ -2,9 +2,6 @@
     "type": "lib",
     "config": "air",
     "compilerOptions": {
-        "library-path": [
-            "native/bin"
-        ],
         "include-libraries": [
             "native/bin/lz4.swc"
         ],
