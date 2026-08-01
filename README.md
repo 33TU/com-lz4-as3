@@ -4,6 +4,10 @@ LZ4 block, streaming, and frame compression for ActionScript 3. The library
 combines a CrossBridge native implementation with a small AS3 API and targets
 Flash/AIR AVM2 applications.
 
+Download the ready-to-use `com-lz4-as3.swc` from the
+[latest GitHub release](https://github.com/33TU/com-lz4-as3/releases/latest),
+or build it from source using the instructions below.
+
 Compression runs roughly 10x to over 100x faster than the player's built-in
 `ByteArray` deflate, and decompression 4x to 6x faster, in exchange for a weaker
 ratio. See [Benchmark](#benchmark) for the measurements and where each one wins.
