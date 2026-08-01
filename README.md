@@ -220,5 +220,10 @@ one long literal run, measures close to raw memcpy.
 
 ## License
 
+BSD 2-Clause. See [`LICENSE`](LICENSE).
+
 This project integrates the official [LZ4](https://github.com/lz4/lz4) and
-[xxHash](https://github.com/Cyan4973/xxHash) libraries, which are BSD-licensed.
+[xxHash](https://github.com/Cyan4973/xxHash) libraries, both BSD 2-Clause, whose
+notices are reproduced in `LICENSE`. Ship that file alongside
+`build/com-lz4-as3.swc`: the SWC embeds compiled forms of both, and their license
+requires binary distributions to carry the attribution.
