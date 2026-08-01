@@ -8,11 +8,15 @@ package com.lz4
 
     public final class FrameDecoder
     {
+        public static const DEFAULT_MAX_OUTPUT_SIZE:uint = 256 * 1024 * 1024;
+
         private var _handle:uint;
 
-        public function FrameDecoder()
+        public function FrameDecoder(
+                maxOutputSize:uint = DEFAULT_MAX_OUTPUT_SIZE
+            )
         {
-            _handle = createFrameDecoder();
+            _handle = createFrameDecoder(maxOutputSize);
         }
 
         public function decompress(src:ByteArray, dest:ByteArray):Boolean

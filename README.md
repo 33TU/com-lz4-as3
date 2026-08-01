@@ -22,7 +22,7 @@ Flash/AIR AVM2 applications.
 | `StreamEncoder` | `compress()`, `dispose()` | Ordered, dictionary-dependent block compression |
 | `StreamDecoder` | `decompress()`, `dispose()` | Ordered, dictionary-dependent block decompression |
 | `FrameEncoder` | `begin()`, `update()`, `end()`, `dispose()` | Standard LZ4 frame compression |
-| `FrameDecoder` | `decompress()`, `dispose()` | Incremental and concatenated LZ4 frame decompression |
+| `FrameDecoder` | `decompress()`, `dispose()` | Incremental and size-limited LZ4 frame decompression |
 
 Only classes in `com.lz4` are supported public API. Symbols under
 `com.lz4._native` are implementation details used by those classes.
@@ -31,16 +31,28 @@ Only classes in `com.lz4` are supported public API. Symbols under
 
 Operations read from `src.position` and write at `dest.position`. Successful
 calls advance both positions by the number of bytes consumed or produced.
-Output is appended when `dest.position == dest.length`.
+Output is appended when `dest.position == dest.length`. Source and destination
+must be different `ByteArray` instances.
 
 `Block.compress()` and `Block.decompress()` return `void`. Read the compressed
 size from the destination position or length. Block and stream decompression
 require the exact original uncompressed size.
 
+Validate `originalSize` before block or stream decompression when it comes from
+an untrusted source, since it controls the native output allocation.
+
 Stream blocks must be decompressed in the same order in which they were
 compressed. `FrameDecoder.decompress()` returns `true` when one complete frame
 ends. It can consume partial input across calls and leaves bytes belonging to a
 following concatenated frame unread.
+
+`FrameDecoder` limits each complete frame to 256 MiB by default, including
+output produced across incremental calls. Supply a different nonzero limit to
+the constructor when needed:
+
+```as3
+const decoder:FrameDecoder = new FrameDecoder(64 * 1024 * 1024);
+```
 
 Stateful encoders and decoders own native memory. Always call their idempotent
 `dispose()` method, preferably from `finally`:
@@ -118,8 +130,9 @@ AIR's ABC 47 `float` type.
 ## Tests
 
 The native smoke test exercises block round trips, dependent stream blocks,
-frame state ordering, complete and incremental frame decoding, concatenated
-frames, corrupt input, and decoder recovery:
+aliased buffer rejection, frame output limits, frame state ordering, complete
+and incremental frame decoding, concatenated frames, corrupt input, and decoder
+recovery:
 
 ```sh
 just run-native-test

@@ -31,6 +31,15 @@ static void test_block(void)
         "if (!rejectedEmpty) throw new Error('empty block input was accepted');");
 
     inline_as3(
+        "source.position = 0;"
+        "var rejectedAlias:Boolean = false;"
+        "try {"
+        "com.lz4._native.compressBlock(source, source);"
+        "} catch (aliasError:ArgumentError) {"
+        "rejectedAlias = true;"
+        "}"
+        "if (!rejectedAlias || source.position != 0) throw new Error('aliased block buffers were accepted');"
+
         "compressed.position = 0;"
         "var originalPosition:uint = compressed.position;"
         "var rejectedWrongSize:Boolean = false;"
@@ -115,10 +124,47 @@ static void test_frame(void)
 
         /* Encode one complete frame. */
         "com.lz4._native.beginFrame(encoder, compressed);"
+        "var rejectedAlias:Boolean = false;"
+        "try {"
+        "com.lz4._native.updateFrame(encoder, source, source);"
+        "} catch (aliasError:ArgumentError) {"
+        "rejectedAlias = true;"
+        "}"
+        "if (!rejectedAlias) throw new Error('aliased frame buffers were accepted');"
         "com.lz4._native.updateFrame(encoder, source, compressed);"
         "com.lz4._native.endFrame(encoder, compressed);"
         "if (compressed.length <= 11) throw new Error('frame output is incomplete');"
         "com.lz4._native.disposeFrameEncoder(encoder);"
+
+        /* Enforce the configured output limit before writing any result. */
+        "var limitedDecoder:uint = com.lz4._native.createFrameDecoder(32);"
+        "compressed.position = 0;"
+        "var rejectedLargeFrame:Boolean = false;"
+        "try {"
+        "com.lz4._native.decompressFrame(limitedDecoder, compressed, new ByteArray());"
+        "} catch (limitError:RangeError) {"
+        "rejectedLargeFrame = true;"
+        "}"
+        "if (!rejectedLargeFrame || compressed.position != 0) throw new Error('frame output limit failed');"
+
+        "var emptyEncoder:uint = com.lz4._native.createFrameEncoder();"
+        "var emptyFrame:ByteArray = new ByteArray();"
+        "com.lz4._native.beginFrame(emptyEncoder, emptyFrame);"
+        "com.lz4._native.endFrame(emptyEncoder, emptyFrame);"
+        "com.lz4._native.disposeFrameEncoder(emptyEncoder);"
+        "emptyFrame.position = 0;"
+        "if (!com.lz4._native.decompressFrame(limitedDecoder, emptyFrame, new ByteArray())) {"
+        "throw new Error('frame decoder did not recover after output limit');"
+        "}"
+        "com.lz4._native.disposeFrameDecoder(limitedDecoder);"
+
+        "var rejectedZeroLimit:Boolean = false;"
+        "try {"
+        "com.lz4._native.createFrameDecoder(0);"
+        "} catch (zeroLimitError:ArgumentError) {"
+        "rejectedZeroLimit = true;"
+        "}"
+        "if (!rejectedZeroLimit) throw new Error('zero frame output limit was accepted');"
 
         /* Decode the complete frame. */
         "var decoder:uint = com.lz4._native.createFrameDecoder();"

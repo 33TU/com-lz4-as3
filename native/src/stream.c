@@ -158,6 +158,7 @@ void comlz4_stream_compress(void)
     inline_as3(
         "if (src == null) throw new ArgumentError('src must not be null.');"
         "if (dest == null) throw new ArgumentError('dest must not be null.');"
+        "if (src === dest) throw new ArgumentError('src and dest must be different ByteArray instances.');"
         "%0 = handle;"
         "%1 = src.bytesAvailable;"
         "%2 = src.position;"
@@ -226,15 +227,15 @@ void comlz4_stream_compress(void)
         return;
     }
 
+    inline_as3("CModule.ram.position = %0;" : : "r"(output));
+    inline_as3("CModule.ram.readBytes(dest, dest.position, %0);" : : "r"(compressed_size));
+    inline_as3("dest.position += %0;" : : "r"(compressed_size));
+
     comlz4_history_append(
         encoder->history,
         &encoder->history_size,
         buffer,
         source_length);
-
-    inline_as3("CModule.ram.position = %0;" : : "r"(output));
-    inline_as3("CModule.ram.readBytes(dest, dest.position, %0);" : : "r"(compressed_size));
-    inline_as3("dest.position += %0;" : : "r"(compressed_size));
 }
 
 void comlz4_stream_decoder_create(void)
@@ -288,6 +289,7 @@ void comlz4_stream_decompress(void)
     inline_as3(
         "if (src == null) throw new ArgumentError('src must not be null.');"
         "if (dest == null) throw new ArgumentError('dest must not be null.');"
+        "if (src === dest) throw new ArgumentError('src and dest must be different ByteArray instances.');"
         "%0 = handle;"
         "%1 = src.bytesAvailable;"
         "%2 = src.position;"
@@ -358,13 +360,13 @@ void comlz4_stream_decompress(void)
         return;
     }
 
+    inline_as3("CModule.ram.position = %0;" : : "r"(output));
+    inline_as3("CModule.ram.readBytes(dest, dest.position, %0);" : : "r"(decompressed_size));
+    inline_as3("dest.position += %0;" : : "r"(decompressed_size));
+
     comlz4_history_append(
         decoder->history,
         &decoder->history_size,
         output,
         original_size);
-
-    inline_as3("CModule.ram.position = %0;" : : "r"(output));
-    inline_as3("CModule.ram.readBytes(dest, dest.position, %0);" : : "r"(decompressed_size));
-    inline_as3("dest.position += %0;" : : "r"(decompressed_size));
 }

@@ -36,7 +36,7 @@ void comlz4_frame_end(void)
 
 void comlz4_frame_decoder_create(void)
     __attribute__((used,
-                   annotate("as3sig:public function createFrameDecoder():uint"),
+                   annotate("as3sig:public function createFrameDecoder(maxOutputSize:uint = 268435456):uint"),
                    annotate("as3package:com.lz4._native")));
 
 void comlz4_frame_decoder_dispose(void)
@@ -70,6 +70,8 @@ typedef struct
     LZ4F_dctx *lz4;
     comlz4_scratch input;
     comlz4_scratch output;
+    size_t frame_output_size;
+    size_t max_output_size;
 } comlz4_frame_decoder;
 
 #define COMLZ4_FRAME_OUTPUT_CHUNK 65536
@@ -93,6 +95,12 @@ static void comlz4_frame_decoder_destroy(comlz4_frame_decoder *decoder)
     comlz4_scratch_dispose(&decoder->input);
     comlz4_scratch_dispose(&decoder->output);
     free(decoder);
+}
+
+static void comlz4_frame_decoder_reset(comlz4_frame_decoder *decoder)
+{
+    LZ4F_resetDecompressionContext(decoder->lz4);
+    decoder->frame_output_size = 0;
 }
 
 void comlz4_frame_encoder_create(void)
@@ -194,10 +202,11 @@ void comlz4_frame_begin(void)
         return;
     }
 
-    encoder->state = COMLZ4_FRAME_ACTIVE;
+    encoder->state = COMLZ4_FRAME_FAILED;
     inline_as3("CModule.ram.position = %0;" : : "r"(output));
     inline_as3("CModule.ram.readBytes(dest, dest.position, %0);" : : "r"(produced));
     inline_as3("dest.position += %0;" : : "r"(produced));
+    encoder->state = COMLZ4_FRAME_ACTIVE;
 }
 
 void comlz4_frame_update(void)
@@ -215,6 +224,7 @@ void comlz4_frame_update(void)
     inline_as3(
         "if (src == null) throw new ArgumentError('src must not be null.');"
         "if (dest == null) throw new ArgumentError('dest must not be null.');"
+        "if (src === dest) throw new ArgumentError('src and dest must be different ByteArray instances.');"
         "%0 = handle;"
         "%1 = src.bytesAvailable;"
         "%2 = src.position;"
@@ -279,9 +289,11 @@ void comlz4_frame_update(void)
 
     if (produced > 0)
     {
+        encoder->state = COMLZ4_FRAME_FAILED;
         inline_as3("CModule.ram.position = %0;" : : "r"(output));
         inline_as3("CModule.ram.readBytes(dest, dest.position, %0);" : : "r"(produced));
         inline_as3("dest.position += %0;" : : "r"(produced));
+        encoder->state = COMLZ4_FRAME_ACTIVE;
     }
 }
 
@@ -337,16 +349,25 @@ void comlz4_frame_end(void)
         return;
     }
 
-    encoder->state = COMLZ4_FRAME_READY;
+    encoder->state = COMLZ4_FRAME_FAILED;
     inline_as3("CModule.ram.position = %0;" : : "r"(output));
     inline_as3("CModule.ram.readBytes(dest, dest.position, %0);" : : "r"(produced));
     inline_as3("dest.position += %0;" : : "r"(produced));
+    encoder->state = COMLZ4_FRAME_READY;
 }
 
 void comlz4_frame_decoder_create(void)
 {
     size_t result;
+    uint32_t max_output_size;
     comlz4_frame_decoder *decoder;
+
+    inline_as3("%0 = maxOutputSize;" : "=r"(max_output_size));
+    if (max_output_size == 0)
+    {
+        inline_as3("throw new ArgumentError('maxOutputSize must be greater than 0.');");
+        return;
+    }
 
     decoder = (comlz4_frame_decoder *)calloc(1, sizeof(*decoder));
     if (!decoder)
@@ -363,6 +384,7 @@ void comlz4_frame_decoder_create(void)
         return;
     }
 
+    decoder->max_output_size = max_output_size;
     AS3_Return((uint32_t)(uintptr_t)decoder);
 }
 
@@ -395,6 +417,7 @@ void comlz4_frame_decompress(void)
     inline_as3(
         "if (src == null) throw new ArgumentError('src must not be null.');"
         "if (dest == null) throw new ArgumentError('dest must not be null.');"
+        "if (src === dest) throw new ArgumentError('src and dest must be different ByteArray instances.');"
         "%0 = handle;"
         "%1 = src.bytesAvailable;"
         "%2 = src.position;"
@@ -432,7 +455,7 @@ void comlz4_frame_decompress(void)
         if (output_total > UINT32_MAX - COMLZ4_FRAME_OUTPUT_CHUNK ||
             !comlz4_size_add(output_total, COMLZ4_FRAME_OUTPUT_CHUNK, &required))
         {
-            LZ4F_resetDecompressionContext(decoder->lz4);
+            comlz4_frame_decoder_reset(decoder);
             inline_as3("src.position = %0;" : : "r"(source_position));
             inline_as3("throw new RangeError('Decompressed frame output is too large.');");
             return;
@@ -441,7 +464,7 @@ void comlz4_frame_decompress(void)
         output = comlz4_scratch_reserve(&decoder->output, required);
         if (!output)
         {
-            LZ4F_resetDecompressionContext(decoder->lz4);
+            comlz4_frame_decoder_reset(decoder);
             inline_as3("src.position = %0;" : : "r"(source_position));
             inline_as3("throw new Error('Unable to allocate the frame output buffer.');");
             return;
@@ -456,9 +479,19 @@ void comlz4_frame_decompress(void)
             NULL);
         if (LZ4F_isError(hint))
         {
-            LZ4F_resetDecompressionContext(decoder->lz4);
+            comlz4_frame_decoder_reset(decoder);
             inline_as3("src.position = %0;" : : "r"(source_position));
             inline_as3("throw new Error('Invalid or corrupt LZ4 frame data.');");
+            return;
+        }
+
+        if (decoder->frame_output_size > decoder->max_output_size ||
+            output_total > decoder->max_output_size - decoder->frame_output_size ||
+            produced > decoder->max_output_size - decoder->frame_output_size - output_total)
+        {
+            comlz4_frame_decoder_reset(decoder);
+            inline_as3("src.position = %0;" : : "r"(source_position));
+            inline_as3("throw new RangeError('LZ4 frame exceeds maxOutputSize.');");
             return;
         }
 
@@ -479,7 +512,7 @@ void comlz4_frame_decompress(void)
 
     if (output_total > UINT32_MAX - destination_position)
     {
-        LZ4F_resetDecompressionContext(decoder->lz4);
+        comlz4_frame_decoder_reset(decoder);
         inline_as3("src.position = %0;" : : "r"(source_position));
         inline_as3("throw new RangeError('dest does not have enough addressable space.');");
         return;
@@ -492,6 +525,10 @@ void comlz4_frame_decompress(void)
         inline_as3("CModule.ram.readBytes(dest, dest.position, %0);" : : "r"(output_total));
         inline_as3("dest.position += %0;" : : "r"(output_total));
     }
+
+    decoder->frame_output_size += output_total;
+    if (frame_complete)
+        decoder->frame_output_size = 0;
 
     AS3_Return(frame_complete);
 }

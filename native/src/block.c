@@ -34,6 +34,7 @@ void comlz4_block_compress(void)
     inline_as3(
         "if (src == null) throw new ArgumentError('src must not be null.');"
         "if (dest == null) throw new ArgumentError('dest must not be null.');"
+        "if (src === dest) throw new ArgumentError('src and dest must be different ByteArray instances.');"
         "%0 = src.bytesAvailable;"
         "%1 = src.position;"
         "%2 = dest.position;" : "=r"(source_length),
@@ -113,6 +114,7 @@ void comlz4_block_decompress(void)
     inline_as3(
         "if (src == null) throw new ArgumentError('src must not be null.');"
         "if (dest == null) throw new ArgumentError('dest must not be null.');"
+        "if (src === dest) throw new ArgumentError('src and dest must be different ByteArray instances.');"
         "%0 = src.bytesAvailable;"
         "%1 = src.position;"
         "%2 = dest.position;" : "=r"(source_length),

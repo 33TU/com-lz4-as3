@@ -31,6 +31,18 @@ package
             Block.decompress(compressed, restored, source.length);
 
             assertEquals(input, restored.toString(), "block round trip");
+
+            const aliased:ByteArray = bytes("aliased block");
+            var rejectedAlias:Boolean = false;
+            try
+            {
+                Block.compress(aliased, aliased);
+            }
+            catch (error:ArgumentError)
+            {
+                rejectedAlias = true;
+            }
+            assertTrue(rejectedAlias && aliased.position == 0, "block alias rejection");
         }
 
         private static function testStream():void
@@ -55,6 +67,17 @@ package
                 encoder.dispose();
                 encoder.dispose();
             }
+
+            var rejectedDisposed:Boolean = false;
+            try
+            {
+                encoder.compress(bytes("disposed"), new ByteArray());
+            }
+            catch (disposedError:ArgumentError)
+            {
+                rejectedDisposed = true;
+            }
+            assertTrue(rejectedDisposed, "disposed stream encoder");
 
             const decoder:StreamDecoder = new StreamDecoder();
             try
@@ -93,6 +116,26 @@ package
                 encoder.dispose();
                 encoder.dispose();
             }
+
+            const limitedDecoder:FrameDecoder = new FrameDecoder(32);
+            var rejectedLargeFrame:Boolean = false;
+            try
+            {
+                compressed.position = 0;
+                limitedDecoder.decompress(compressed, new ByteArray());
+            }
+            catch (limitError:RangeError)
+            {
+                rejectedLargeFrame = true;
+            }
+            finally
+            {
+                limitedDecoder.dispose();
+            }
+            assertTrue(
+                rejectedLargeFrame && compressed.position == 0,
+                "frame output limit"
+            );
 
             const decoder:FrameDecoder = new FrameDecoder();
             try
