@@ -11,11 +11,11 @@ build-native:
         -disable-telemetry \
         -O4 \
         -DNDEBUG \
-        src/comlz4_block.c \
-        src/comlz4_buffer.c \
-        src/comlz4_stream.c \
-        src/comlz4_frame.c \
-        src/comlz4.c \
+        src/block.c \
+        src/frame.c \
+        src/scratch.c \
+        src/stream.c \
+        src/module.c \
         vendor/lz4.c \
         vendor/lz4hc.c \
         vendor/lz4frame.c \
@@ -33,11 +33,11 @@ build-native-test:
         -disable-telemetry \
         -O4 \
         -DNDEBUG \
-        src/comlz4_block.c \
-        src/comlz4_buffer.c \
-        src/comlz4_stream.c \
-        src/comlz4_frame.c \
-        src/comlz4.c \
+        src/block.c \
+        src/frame.c \
+        src/scratch.c \
+        src/stream.c \
+        test/smoke.c \
         vendor/lz4.c \
         vendor/lz4hc.c \
         vendor/lz4frame.c \
@@ -49,6 +49,52 @@ build-native-test:
 run-native-test: build-native-test
     ./native/bin/lz4
 
-# Remove only generated native artifacts.
+# Build one distributable SWC containing the native code and AS3 API.
+build-as3: build-native
+    mkdir -p build
+    acompc \
+        -include-sources as3/src \
+        -include-libraries native/bin/lz4.swc \
+        -output build/com-lz4-as3.swc \
+        -compiler.strict=true \
+        -compiler.float=false \
+        -debug=false
+
+# Compile the public AS3 API smoke test.
+build-as3-test: build-as3
+    amxmlc \
+        -library-path+=build/com-lz4-as3.swc \
+        -output build/com-lz4-as3-test.swf \
+        -compiler.strict=true \
+        -compiler.float=false \
+        -debug=true \
+        as3/test/Lz4Test.as
+
+# Compile the standalone block, stream, and frame examples.
+build-examples: build-as3
+    mkdir -p build/examples
+    amxmlc \
+        -library-path+=build/com-lz4-as3.swc \
+        -output build/examples/BlockExample.swf \
+        -compiler.strict=true \
+        -compiler.float=false \
+        -debug=true \
+        example/BlockExample.as
+    amxmlc \
+        -library-path+=build/com-lz4-as3.swc \
+        -output build/examples/StreamExample.swf \
+        -compiler.strict=true \
+        -compiler.float=false \
+        -debug=true \
+        example/StreamExample.as
+    amxmlc \
+        -library-path+=build/com-lz4-as3.swc \
+        -output build/examples/FrameExample.swf \
+        -compiler.strict=true \
+        -compiler.float=false \
+        -debug=true \
+        example/FrameExample.as
+
+# Remove generated build artifacts.
 clean:
-    rm -f native/bin/lz4.swc native/bin/lz4 native/bin/lz4.exe
+    rm -f native/bin/lz4.swc native/bin/lz4 native/bin/lz4.exe build/com-lz4-as3.swc build/com-lz4-as3-test.swf build/examples/BlockExample.swf build/examples/StreamExample.swf build/examples/FrameExample.swf
