@@ -49,6 +49,31 @@ build-native-test:
 run-native-test: build-native-test
     ./native/bin/lz4
 
+# Build the native executable containing the LZ4 versus deflate benchmark.
+build-native-bench:
+    mkdir -p native/bin
+    cd native && crossbridge gcc \
+        -flto-api=exports.txt \
+        -fllvm-opt-opt=-strip \
+        -disable-telemetry \
+        -O4 \
+        -DNDEBUG \
+        src/block.c \
+        src/frame.c \
+        src/scratch.c \
+        src/stream.c \
+        test/bench.c \
+        vendor/lz4.c \
+        vendor/lz4hc.c \
+        vendor/lz4frame.c \
+        vendor/xxhash.c \
+        -Ivendor \
+        -o bin/bench
+
+# Build and run the LZ4 versus deflate benchmark.
+run-native-bench: build-native-bench
+    ./native/bin/bench
+
 # Build one distributable SWC containing the native code and AS3 API.
 build-as3: build-native
     mkdir -p build
@@ -97,4 +122,4 @@ build-examples: build-as3
 
 # Remove generated build artifacts.
 clean:
-    rm -f native/bin/lz4.swc native/bin/lz4 native/bin/lz4.exe build/com-lz4-as3.swc build/com-lz4-as3-test.swf build/examples/BlockExample.swf build/examples/StreamExample.swf build/examples/FrameExample.swf
+    rm -f native/bin/lz4.swc native/bin/lz4 native/bin/lz4.exe native/bin/bench build/com-lz4-as3.swc build/com-lz4-as3-test.swf build/examples/BlockExample.swf build/examples/StreamExample.swf build/examples/FrameExample.swf
