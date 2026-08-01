@@ -212,12 +212,6 @@ operations. LZ4's copy-heavy paths therefore run at native speed while only its
 scan logic is interpreted, which is why incompressible input, where LZ4 emits
 one long literal run, measures close to raw memcpy.
 
-## TODO
-
-- Frame dictionaries
-- Frame metadata APIs where useful
-- Randomized and allocation-failure tests
-
 ## License
 
 BSD 2-Clause. See [`LICENSE`](LICENSE).
