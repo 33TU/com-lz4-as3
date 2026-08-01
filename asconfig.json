@@ -1,0 +1,14 @@
+{
+    "type": "lib",
+    "config": "air",
+    "compilerOptions": {
+        "include-libraries": [
+            "native/bin/lz4.swc"
+        ],
+        "include-sources": [
+            "as3/src",
+            "as3/test"
+        ],
+        "output": "build/com-lz4-as3.swc"
+    }
+}
