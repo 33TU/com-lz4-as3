@@ -22,7 +22,7 @@ asset handling.
 - ✅ Stream compression and decompression support
 - ✅ Frame compression support
 - ✅ Integration with `ByteArray` for seamless AS3 use
-- ✅ Built from native LZ4 sources (`lib/`)
+- ✅ Built from vendored LZ4 sources (`native/vendor/`)
 
 ---
 
@@ -74,14 +74,20 @@ package
 
 ## Build
 
-Compiler used: https://github.com/crossbridge-community/crossbridge
+Requirements:
 
-```bat
-build-exe.bat => builds native EXE test
-build-swc.bat => builds SWC (com.lz4)
+- [CrossBridge](https://github.com/crossbridge-community/crossbridge), available
+  through the `crossbridge` command
+- [just](https://github.com/casey/just)
+
+```sh
+just build-native       # Build the native com.lz4 SWC
+just build-native-test  # Build native/bin/lz4 with embedded smoke tests
+just run-native-test    # Build and run the embedded smoke tests
+just clean              # Remove generated native artifacts
 ```
 
-Output files are placed in `/bin`.
+Output files are placed in `native/bin/`.
 
 ---
 

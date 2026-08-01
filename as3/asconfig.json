@@ -1,0 +1,13 @@
+{
+	"type": "lib",
+	"config": "air",
+	"compilerOptions": {
+		"include-sources": [
+			"src"
+		],
+		"library-path": [
+			"libs"
+		],
+		"output": "bin/comlz4.swc"
+	}
+}
