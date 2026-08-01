@@ -184,7 +184,9 @@ just run-native-bench
 ```
 
 Throughput in MiB/s, ratio as a percentage of the original size, 2 MiB per
-dataset over 20 iterations:
+dataset over 20 iterations, measured on an AMD Ryzen 9 9950X3D. Treat the
+absolute numbers as specific to that machine; the ratios between the two codecs
+are what carry over:
 
 | dataset | lz4 | deflate | lz4 comp | deflate comp | lz4 decomp | deflate decomp |
 | --- | --- | --- | --- | --- | --- | --- |
