@@ -9,6 +9,7 @@ Flash/AIR AVM2 applications.
 - LZ4 block compression and decompression
 - Dependent streaming block compression and decompression
 - LZ4 frame compression and incremental decompression
+- Frame content checksums, verified automatically on decode
 - Direct `ByteArray` input and output
 - Reusable scratch buffers to reduce native allocations
 - Strict, Flash-compatible AS3 output without ABC 47 `float` support
@@ -19,13 +20,31 @@ Flash/AIR AVM2 applications.
 | Class | Methods | Purpose |
 | --- | --- | --- |
 | `Block` | `compress()`, `decompress()` | Stateless, independent LZ4 blocks |
-| `StreamEncoder` | `compress()`, `dispose()` | Ordered, dictionary-dependent block compression |
-| `StreamDecoder` | `decompress()`, `dispose()` | Ordered, dictionary-dependent block decompression |
-| `FrameEncoder` | `begin()`, `update()`, `end()`, `dispose()` | Standard LZ4 frame compression |
-| `FrameDecoder` | `decompress()`, `dispose()` | Incremental and size-limited LZ4 frame decompression |
+| `StreamEncoder` | `compress()`, `dispose()`, `disposed` | Ordered, dictionary-dependent block compression |
+| `StreamDecoder` | `decompress()`, `dispose()`, `disposed` | Ordered, dictionary-dependent block decompression |
+| `FrameEncoder` | `begin()`, `update()`, `end()`, `dispose()`, `disposed` | Standard LZ4 frame compression |
+| `FrameDecoder` | `decompress()`, `dispose()`, `disposed` | Incremental and size-limited LZ4 frame decompression |
 
 Only classes in `com.lz4` are supported public API. Symbols under
 `com.lz4._native` are implementation details used by those classes.
+
+### Choosing a mode
+
+Prefer `FrameEncoder`/`FrameDecoder` unless you have a reason not to. The LZ4
+frame format carries its own block boundaries and content checksum, so the
+decoder needs nothing but the bytes, and corrupt input is reported rather than
+decoded into garbage.
+
+`Block` suits single self-contained payloads whose uncompressed size you already
+know.
+
+`StreamEncoder`/`StreamDecoder` give the best ratio on a sequence of related
+blocks, but they carry no framing of their own: you must transmit each block's
+uncompressed size yourself and present the blocks to the decoder in exactly the
+order and boundaries the encoder saw. Getting that wrong yields a generic
+failure or silently wrong output, because there is nothing in the payload to
+detect it with. Reach for stream mode only when you already have your own
+framing.
 
 ### ByteArray behavior
 
@@ -46,16 +65,28 @@ compressed. `FrameDecoder.decompress()` returns `true` when one complete frame
 ends. It can consume partial input across calls and leaves bytes belonging to a
 following concatenated frame unread.
 
-`FrameDecoder` limits each complete frame to 256 MiB by default, including
-output produced across incremental calls. Supply a different nonzero limit to
-the constructor when needed:
+`FrameDecoder` limits each complete frame to
+`FrameDecoder.DEFAULT_MAX_OUTPUT_SIZE` (32 MiB) by default, including output
+produced across incremental calls. The decoder buffers a whole frame natively
+before writing to `dest`, so this limit also caps its native memory. Supply a
+different nonzero limit to the constructor when needed:
 
 ```as3
 const decoder:FrameDecoder = new FrameDecoder(64 * 1024 * 1024);
 ```
 
+Frames carry a content checksum that `FrameDecoder` verifies automatically; a
+tampered or corrupt frame throws instead of yielding silent garbage. When a
+frame is decoded through several incremental calls, output from earlier calls
+has already been written to `dest` by the time the trailing checksum is
+verified.
+
+`FrameEncoder` cannot be reused after a native error. Every subsequent call
+throws `IllegalOperationError`; discard the instance and construct a new one.
+
 Stateful encoders and decoders own native memory. Always call their idempotent
-`dispose()` method, preferably from `finally`:
+`dispose()` method, preferably from `finally`. The `disposed` getter reports
+whether the native handle has been released:
 
 ```as3
 const decoder:FrameDecoder = new FrameDecoder();
@@ -130,9 +161,9 @@ AIR's ABC 47 `float` type.
 ## Tests
 
 The native smoke test exercises block round trips, dependent stream blocks,
-aliased buffer rejection, frame output limits, frame state ordering, complete
-and incremental frame decoding, concatenated frames, corrupt input, and decoder
-recovery:
+stream dictionary retention, aliased buffer rejection, frame output limits,
+frame state ordering, complete and incremental frame decoding, concatenated
+frames, corrupt input, content checksum enforcement, and decoder recovery:
 
 ```sh
 just run-native-test

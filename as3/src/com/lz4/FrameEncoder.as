@@ -17,6 +17,11 @@ package com.lz4
             _handle = createFrameEncoder(compressionLevel);
         }
 
+        public function get disposed():Boolean
+        {
+            return _handle == 0;
+        }
+
         public function begin(dest:ByteArray):void
         {
             beginFrame(_handle, dest);

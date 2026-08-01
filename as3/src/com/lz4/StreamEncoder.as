@@ -15,6 +15,11 @@ package com.lz4
             _handle = createStreamEncoder();
         }
 
+        public function get disposed():Boolean
+        {
+            return _handle == 0;
+        }
+
         public function compress(
                 src:ByteArray,
                 dest:ByteArray,

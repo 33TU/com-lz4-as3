@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "scratch.h"
+#include "stream.h"
 
 void comlz4_stream_encoder_create(void)
     __attribute__((used,
@@ -39,8 +40,6 @@ void comlz4_stream_decompress(void)
                    annotate("as3import:flash.utils.ByteArray"),
                    annotate("as3package:com.lz4._native")));
 
-#define COMLZ4_HISTORY_CAPACITY 65536
-
 typedef struct
 {
     LZ4_stream_t *lz4;
@@ -57,7 +56,7 @@ typedef struct
     int history_size;
 } comlz4_stream_decoder;
 
-static void comlz4_history_append(
+void comlz4_history_append(
     char history[COMLZ4_HISTORY_CAPACITY],
     int *history_size,
     const char *data,

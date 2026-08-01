@@ -15,6 +15,11 @@ package com.lz4
             _handle = createStreamDecoder();
         }
 
+        public function get disposed():Boolean
+        {
+            return _handle == 0;
+        }
+
         public function decompress(
                 src:ByteArray,
                 dest:ByteArray,

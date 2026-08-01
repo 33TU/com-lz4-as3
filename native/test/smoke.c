@@ -1,5 +1,9 @@
 #include <AS3/AS3.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "../src/stream.h"
 
 // Block compression and decompression
 static void test_block(void)
@@ -99,6 +103,49 @@ static void test_stream(void)
         "com.lz4._native.disposeStreamDecoder(decoder);");
 }
 
+// Stream dictionary retention, asserted against the expected bytes directly
+static void fail(const char *label)
+{
+    printf("%s failed\n", label);
+    exit(1);
+}
+
+static void test_history(void)
+{
+    static char history[COMLZ4_HISTORY_CAPACITY];
+    static char data[COMLZ4_HISTORY_CAPACITY * 2];
+    int size = 0;
+    size_t index;
+
+    for (index = 0; index < sizeof(data); ++index)
+        data[index] = (char)(index * 31 + 7);
+
+    memset(history, 0, sizeof(history));
+
+    /* An empty window takes the block at offset 0. */
+    comlz4_history_append(history, &size, data, 100);
+    if (size != 100 || memcmp(history, data, 100) != 0)
+        fail("history initial append");
+
+    /* A partially filled window appends after the retained bytes. */
+    comlz4_history_append(history, &size, data + 100, 200);
+    if (size != 300 || memcmp(history, data, 300) != 0)
+        fail("history partial append");
+
+    /* A block at least as large as the window replaces it with its tail. */
+    comlz4_history_append(history, &size, data, COMLZ4_HISTORY_CAPACITY + 500);
+    if (size != COMLZ4_HISTORY_CAPACITY ||
+        memcmp(history, data + 500, COMLZ4_HISTORY_CAPACITY) != 0)
+        fail("history oversized append");
+
+    /* A saturated window discards exactly the overflow from the front. */
+    comlz4_history_append(history, &size, data, 100);
+    if (size != COMLZ4_HISTORY_CAPACITY ||
+        memcmp(history, data + 600, COMLZ4_HISTORY_CAPACITY - 100) != 0 ||
+        memcmp(history + COMLZ4_HISTORY_CAPACITY - 100, data, 100) != 0)
+        fail("history saturated append");
+}
+
 // Frame compression and decompression
 static void test_frame(void)
 {
@@ -134,6 +181,12 @@ static void test_frame(void)
         "com.lz4._native.updateFrame(encoder, source, compressed);"
         "com.lz4._native.endFrame(encoder, compressed);"
         "if (compressed.length <= 11) throw new Error('frame output is incomplete');"
+
+        /* FLG bit 2 of the frame header marks the trailing content checksum. */
+        "compressed.position = 4;"
+        "if ((compressed.readUnsignedByte() & 0x04) == 0) {"
+        "throw new Error('frame content checksum is disabled');"
+        "}"
         "com.lz4._native.disposeFrameEncoder(encoder);"
 
         /* Enforce the configured output limit before writing any result. */
@@ -167,7 +220,7 @@ static void test_frame(void)
         "if (!rejectedZeroLimit) throw new Error('zero frame output limit was accepted');"
 
         /* Decode the complete frame. */
-        "var decoder:uint = com.lz4._native.createFrameDecoder();"
+        "var decoder:uint = com.lz4._native.createFrameDecoder(33554432);"
         "compressed.position = 0;"
         "var complete:Boolean;"
         "try {"
@@ -176,6 +229,24 @@ static void test_frame(void)
         "throw new Error('full frame decode: ' + error.message);"
         "}"
         "if (!complete || restored.toString() != input) throw new Error('frame round trip failed');"
+
+        /* A frame whose trailing content checksum was tampered with must fail. */
+        "var tampered:ByteArray = new ByteArray();"
+        "tampered.writeBytes(compressed, 0, compressed.length);"
+        "tampered.position = tampered.length - 1;"
+        "var lastByte:uint = tampered.readUnsignedByte();"
+        "tampered.position = tampered.length - 1;"
+        "tampered.writeByte(lastByte ^ 0xFF);"
+        "tampered.position = 0;"
+        "var rejectedChecksum:Boolean = false;"
+        "try {"
+        "com.lz4._native.decompressFrame(decoder, tampered, new ByteArray());"
+        "} catch (checksumError:Error) {"
+        "rejectedChecksum = true;"
+        "}"
+        "if (!rejectedChecksum || tampered.position != 0) {"
+        "throw new Error('corrupt frame content checksum was accepted');"
+        "}"
 
         /* Stop after each frame when the input contains concatenated frames. */
         "var concatenated:ByteArray = new ByteArray();"
@@ -207,7 +278,7 @@ static void test_frame(void)
         "com.lz4._native.disposeFrameDecoder(decoder);"
 
         /* Resume an incomplete frame after more input becomes available. */
-        "decoder = com.lz4._native.createFrameDecoder();"
+        "decoder = com.lz4._native.createFrameDecoder(33554432);"
         "var chunked:ByteArray = new ByteArray();"
         "var chunkedRestored:ByteArray = new ByteArray();"
         "chunked.writeBytes(compressed, 0, 5);"
@@ -230,6 +301,8 @@ int main(void)
     printf("block test passed\n");
     test_stream();
     printf("stream test passed\n");
+    test_history();
+    printf("history test passed\n");
     test_frame();
     printf("frame test passed\n");
     return 0;

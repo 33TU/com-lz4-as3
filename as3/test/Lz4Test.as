@@ -59,6 +59,7 @@ package
 
             try
             {
+                assertTrue(!encoder.disposed, "live stream encoder");
                 encoder.compress(first, firstCompressed);
                 encoder.compress(second, secondCompressed);
             }
@@ -67,6 +68,8 @@ package
                 encoder.dispose();
                 encoder.dispose();
             }
+
+            assertTrue(encoder.disposed, "disposed stream encoder flag");
 
             var rejectedDisposed:Boolean = false;
             try
@@ -95,6 +98,8 @@ package
                 decoder.dispose();
                 decoder.dispose();
             }
+
+            assertTrue(decoder.disposed, "disposed stream decoder flag");
         }
 
         private static function testFrame():void
@@ -116,6 +121,8 @@ package
                 encoder.dispose();
                 encoder.dispose();
             }
+
+            assertTrue(encoder.disposed, "disposed frame encoder flag");
 
             const limitedDecoder:FrameDecoder = new FrameDecoder(32);
             var rejectedLargeFrame:Boolean = false;
@@ -149,6 +156,8 @@ package
                 decoder.dispose();
                 decoder.dispose();
             }
+
+            assertTrue(decoder.disposed, "disposed frame decoder flag");
         }
 
         private static function bytes(value:String):ByteArray

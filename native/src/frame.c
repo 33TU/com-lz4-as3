@@ -36,7 +36,7 @@ void comlz4_frame_end(void)
 
 void comlz4_frame_decoder_create(void)
     __attribute__((used,
-                   annotate("as3sig:public function createFrameDecoder(maxOutputSize:uint = 268435456):uint"),
+                   annotate("as3sig:public function createFrameDecoder(maxOutputSize:uint):uint"),
                    annotate("as3package:com.lz4._native")));
 
 void comlz4_frame_decoder_dispose(void)
@@ -130,6 +130,7 @@ void comlz4_frame_encoder_create(void)
     encoder->preferences.compressionLevel = compression_level;
     encoder->preferences.autoFlush = 1;
     encoder->preferences.frameInfo.blockMode = LZ4F_blockIndependent;
+    encoder->preferences.frameInfo.contentChecksumFlag = LZ4F_contentChecksumEnabled;
     encoder->state = COMLZ4_FRAME_READY;
 
     AS3_Return((uint32_t)(uintptr_t)encoder);
