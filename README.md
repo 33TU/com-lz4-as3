@@ -196,8 +196,14 @@ are what carry over:
 
 The tradeoff is the usual one: LZ4 compresses roughly 10x to 100x faster and
 decompresses 4x to 6x faster, while deflate reaches a better ratio, by a little
-on text and by about 3x on sparse structured data. Choose LZ4 when throughput
-or frame budget matters and deflate when payload size dominates.
+on text and by about 3x on sparse structured data.
+
+The gap is widest on the sparse records, and it cuts both ways: LZ4 compresses
+them at 1400 MiB/s against deflate's 12, a factor of about 117, while deflate
+gets them down to 5.9% against LZ4's 18%. Compressing 40 MiB of that shape costs
+roughly 30 ms with LZ4 and over 3 seconds with deflate, which is the difference
+between a hitch and a hang if it runs on the main thread. Choose LZ4 when
+throughput or frame budget matters and deflate when payload size dominates.
 
 These figures flatter LZ4 slightly. `ByteArray.compress()` is native player
 code, whereas this library is C compiled to AVM2 bytecode, but `memcpy` and
