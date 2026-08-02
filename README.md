@@ -140,8 +140,10 @@ Complete standalone examples are available for each mode:
 
 Requirements:
 
-- [CrossBridge](https://github.com/crossbridge-community/crossbridge), available
-  through the `crossbridge` command
+- [CrossBridge](https://github.com/33TU/crossbridge), with the `crossbridge`
+  command available in the repository's [`bin`](https://github.com/33TU/crossbridge/tree/master/bin)
+  directory
+- Docker or Podman
 - An AIR SDK providing `acompc` and `amxmlc`
 - [just](https://github.com/casey/just)
 
